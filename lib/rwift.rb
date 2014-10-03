@@ -1,4 +1,3 @@
-require "rwift/version"
 require "yaml"
 require "thor"
 require "fog"
@@ -7,6 +6,8 @@ require "progressbar"
 require "fileutils"
 
 class Rwift < Thor
+  VERSION = "0.0.1"
+
   desc "setup", "Setup Rwift: create a blank config file in ~/"
   def setup
     load_config

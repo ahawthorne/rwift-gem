@@ -13,11 +13,11 @@ Gem::Specification.new do |spec|
   spec.homepage      = ""
   spec.license       = "MIT"
 
-  spec.files         = `git ls-files -z`.split("\x0")
-  #spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
-  spec.executables   = ["rwift"]
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
-  spec.require_paths = ["lib"]
+  #spec.files         = `git ls-files -z`.split("\x0")
+  spec.executables   = "rwift"
+  spec.files = %x{ git ls-files }.split("\n").select { |d| d =~ %r{^(License|README|bin/|data/|ext/|lib/|spec/|test/)} }
+  #spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  #spec.require_paths = ["lib"]
 
   spec.add_dependency "thor"
   spec.add_dependency "fog"
