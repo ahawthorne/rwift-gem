@@ -6,7 +6,9 @@ require "progressbar"
 require "fileutils"
 
 class Rwift < Thor
-  VERSION = "0.0.1"
+  VERSION = "0.0.2"
+
+  attr_accessor :path
 
   desc "setup", "Setup Rwift: create a blank config file in ~/"
   def setup
@@ -35,12 +37,15 @@ class Rwift < Thor
     end
   end
 
-  desc "upload CONTAINER FILES", "Upload files to a container"
+  desc "upload CONTAINER[:PATH] FILES|PATH", "Upload files to a container"
   def upload(container, *files)
     if files.size == 0
       message "Nothing specified to be uploaded."
       exit 1
     end
+
+    container,self.path = container.split(':')
+    self.path ||= ''
 
     dir = service.directories.get(container)
     if dir.nil?
@@ -49,23 +54,27 @@ class Rwift < Thor
     else
       files.each do |f|
         filename = format_filename(f)
-
         if File.file?(f)
-          puts filename
-          if File.size(f) < (1024 * 500)
-            dir.files.create(key: filename, body: File.open(f))
-          else
-            upload_file(container, f)
+          unless files_match?(f, dir.files.head(filename))
+            puts filename
+            if File.size(f) < (1024 * 1000)
+              dir.files.create(key: filename, body: File.open(f))
+            else
+              upload_file(container, f)
+            end
           end
         elsif File.directory?(f)
           Find.find(f) do |path|
             if File.file?(path)
               path_file = format_filename(path)
-              puts path_file
-              if File.size(path) < (1024 * 500)
-                dir.files.create(key: path_file, body: File.open(path))
-              else
-                upload_file(container, path)
+
+              unless files_match?(path, dir.files.head(path_file))
+                puts path_file
+                if File.size(path) < (1024 * 1000)
+                  dir.files.create(key: path_file, body: File.open(path))
+                else
+                  upload_file(container, path)
+                end
               end
             end
           end
@@ -148,6 +157,14 @@ class Rwift < Thor
   end
 
   private
+    def files_match?(local,remote)
+      unless remote.nil?
+        Digest::MD5.file(local).hexdigest == remote.etag
+      else
+        false
+      end
+    end
+
     def upload_file(container, path)
       begin
         filename = format_filename(path)
@@ -172,7 +189,12 @@ class Rwift < Thor
     end
 
     def format_filename(filename)
-      filename =~ /^\// ? filename[1..-1] : filename
+      filename.gsub(/^\//,'')
+      if self.path
+        self.path + '/' + filename
+      else
+        filename
+      end
     end
 
     def message(txt)
